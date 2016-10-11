@@ -18,6 +18,7 @@ public class Analysis_main {
 		int totalWritePagesCount = 0;
 		int totalReadPagesCount = 0;
 
+		
 		int totalCount = 0; // Total Request Count (Read +Write)
 		int writeCount = 0; // Write Request Count
 		int readCount = 0; // Read Request Count
