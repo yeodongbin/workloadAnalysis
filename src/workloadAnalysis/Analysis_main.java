@@ -25,7 +25,6 @@ public class Analysis_main {
 		int write_1pageCount = 0;
 		int total_1pageCount = 0;
 		 
-		
 		long tempLong = -1;
 		long tempAddr = -1;
 		long tempFirst = 0;
