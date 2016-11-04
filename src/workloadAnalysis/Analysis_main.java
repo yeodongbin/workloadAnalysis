@@ -15,125 +15,109 @@ public class Analysis_main {
 
 	public static void main(String args[]) throws Exception {
 
-		int totalWritePagesCount = 0;
-		int totalReadPagesCount = 0;
-
+		int ReqCount = 0; // Total Request Count (Read +Write)
+		int writeReqCount = 0; // Write Request Count
+		int readReqCount = 0; // Read Request Count
 		
-		int totalCount = 0; // Total Request Count (Read +Write)
-		int writeCount = 0; // Write Request Count
-		int readCount = 0; // Read Request Count
-		int read_1pageCount = 0;
-		int write_1pageCount = 0;
-		int total_1pageCount = 0;
-		 
+		int totalWritePages = 0;
+		int totalReadPages = 0;
+		int read_1PageCount = 0;
+		int write_1PageCount = 0;
+	 
+		long lPN = 0; // logical page number from the workload
+		int pageSize = 0; // physical page size from the workload
+		//int pageOffset = 0;
+		
 		long tempLong = -1;
-		long tempAddr = -1;
-		long tempFirst = 0;
-		int temp = 0;
-		long page_number = 0; // physical page number from the workload
-		int page_offset = 0;
-		int page_size = 0; // physical page size from the workload
-
+		
+		System.out.println(" ** Workload Analysis Start ** \n");
+		
 		// LPN, Write-Count , Read-Count
 		TreeMap<Long, Integer> lpnWriteConut = new TreeMap<Long, Integer>();
 		TreeMap<Long, Integer> lpnReadConut = new TreeMap<Long, Integer>();
-		TreeMap<Long, Integer> lpnWriteConut1page = new TreeMap<Long, Integer>();
-		TreeMap<Long, Integer> lpnReadConut1page = new TreeMap<Long, Integer>();
+		TreeMap<Long, Integer> lpnWritePage = new TreeMap<Long, Integer>();
+		TreeMap<Long, Integer> lpnReadPage = new TreeMap<Long, Integer>();
+		TreeMap<Long, Integer> eachPages = new TreeMap<Long, Integer>();
 
 		// I/O trace file format (FILE_INPUT)
 		// .csv:Timestamp,Hostname,DiskNumber,Type,Offset,Size,ResponseTime
-
-		System.out.println("** Workload Analysis Start **\n");
-
+				
 		try (BufferedReader br = new BufferedReader(new FileReader(
 				Config.FINE_INPUT))) {
-
+			
 			for (String line; (line = br.readLine()) != null;) {
 
 				String[] elements = line.split(",");
-				totalCount++;
+				ReqCount++;
 
 				tempLong = Long.valueOf(elements[4]).longValue();
-				page_number = (int) (tempLong / Config.PAGE_BYPT_SIZE);
-				page_offset = (int) (tempLong % Config.PAGE_BYPT_SIZE);
+				lPN = (int) (tempLong / Config.PAGE_BYPT_SIZE);
+				// pageOffset = (int) (tempLong % Config.PAGE_BYPT_SIZE);
 
 				tempLong = Long.valueOf(elements[5]).longValue();
-				page_size = (int) (tempLong / Config.PAGE_BYPT_SIZE);
+				pageSize = (int) (tempLong / Config.PAGE_BYPT_SIZE);
 
-				if (page_size == 0) {
-					page_size = 1;
+				if (0 == pageSize) {
+					pageSize = 1;
+				} else if (0 < ((int) (tempLong % Config.PAGE_BYPT_SIZE))) {
+					pageSize = pageSize + 1;
 				}
 
+				if (elements[3].equals("Write")) {
+					writeReqCount++;
+					// write page 갯수별 분석(pageSize)
+					if (false == eachPages.containsKey(pageSize)) {
+						eachPages.put(lPN, 1);
+					} else {
+						eachPages.put(lPN, lpnWritePage.get(pageSize)+1);
+					}
+
+					// write 1page lpn 모으기
+					if (pageSize == 1) {
+						write_1PageCount++;
+
+						if (false == lpnWritePage.containsKey(lPN)) {
+							lpnWritePage.put(lPN, 1);
+						} else {
+							lpnWritePage.put(lPN, lpnWritePage.get(lPN) + 1);
+						}
+					} else {
+						// in case of multi-pages의 경우 페이지 접근 회수
+						for (int i = 0; i < pageSize; i++) {
+								totalWritePages++;
+
+								if (false == lpnWriteConut.containsKey(lPN + i)) {
+									lpnWriteConut.put(lPN + i, 1);
+								} else {
+									lpnWriteConut.put(lPN + i,
+											lpnWriteConut.get(lPN + i) + 1);
+								}
+						}
+					}
+				} else if (elements[3].equals("Read")) {
+					readReqCount++;
+
+					if (pageSize == 1) {
+						read_1PageCount++;
+
+						if (false == lpnWritePage.containsKey(lPN)) {
+							lpnReadPage.put(lPN, 1);
+						} else {
+							lpnReadPage.put(lPN, lpnReadPage.get(lPN) + 1);
+						}
+					} else {
+						for (int i = 0; i < pageSize; i++) {
+							totalReadPages++;
+							if (false == lpnWriteConut.containsKey(lPN + i)) {
+								lpnReadConut.put(lPN + i, 1);
+							} else {
+								lpnReadConut.put(lPN + i,
+										lpnWriteConut.get(lPN + i) + 1);
+							}
+						}
+					}
+				}
 				System.out.println("\nplease wait....\n");
-
-				// in case of 1page
-				if (page_size == 1) {
-					total_1pageCount++;
-
-					/*
-					 * // 특정 Address 동작 시간 추출 if ((total_1pageCount == 1)) {
-					 * tempFirst = Long.valueOf(elements[0]).longValue();
-					 * System.out.println(tempFirst+ " 00"); }
-					 */
-
-					if (elements[3].equals("Write")) {
-						write_1pageCount++;
-
-						if (false == lpnWriteConut1page
-								.containsKey(page_number)) {
-							lpnWriteConut1page.put(page_number, 1);
-						} else {
-							temp = lpnWriteConut1page.get(page_number);
-							lpnWriteConut1page.put(page_number, ++temp);
-						}
-//
-//						// 특정 Address 동작 시간 추출
-//						if ((page_number == 770055)) {
-//							tempAddr = Long.valueOf(elements[0]).longValue();
-//							System.out.println((tempAddr - tempFirst) + " 1");
-//
-//						} else {
-//							tempAddr = Long.valueOf(elements[0]).longValue();
-//							System.out.println((tempAddr - tempFirst));
-//						}
-//						// **
-
-					} else if (elements[3].equals("Read")) {
-						read_1pageCount++;
-
-						if (false == lpnWriteConut1page
-								.containsKey(page_number)) {
-							lpnReadConut1page.put(page_number, 1);
-						} else {
-							temp = lpnWriteConut1page.get(page_number);
-							lpnReadConut1page.put(page_number, ++temp);
-						}
-					}
-				}
-
-				// in case of multi-pages
-				for (int i = 0; i < page_size; i++) {
-					if (elements[3].equals("Write")) {
-						writeCount++;
-						totalWritePagesCount++;
-
-						if (false == lpnWriteConut.containsKey(page_number + i)) {
-							lpnWriteConut.put(page_number + i, 1);
-						} else {
-							temp = lpnWriteConut.get(page_number + i);
-							lpnWriteConut.put(page_number + i, ++temp);
-						}
-					} else if (elements[3].equals("Read")) {
-						readCount++;
-						totalReadPagesCount++;
-						if (false == lpnWriteConut.containsKey(page_number + i)) {
-							lpnReadConut.put(page_number + i, 1);
-						} else {
-							temp = lpnWriteConut.get(page_number + i);
-							lpnReadConut.put(page_number + i, ++temp);
-						}
-					}
-				}
 			}
 		} catch (Exception e) {
 			System.out.println("Exception while reading csv file: " + e);
@@ -141,33 +125,34 @@ public class Analysis_main {
 
 		MapToTxt(lpnWriteConut, Config.FILE_LPN_WRITE_OUTPUT);
 		MapToTxt(lpnReadConut, Config.FILE_LPN_READ_OUTPUT);
-		MapToTxt(lpnWriteConut1page, Config.FILE_LPN_WRITE_OUTPUT_1PAGE);
-		MapToTxt(lpnReadConut1page, Config.FILE_LPN_READ_OUTPUT_1PAGE);
+		MapToTxt(lpnWritePage, Config.FILE_LPN_WRITE_OUTPUT_1PAGE);
+	    MapToTxt(lpnReadPage, Config.FILE_LPN_READ_OUTPUT_1PAGE);
+		MapToTxt(eachPages, Config.FILE_EACH_WRITE_PAGES);
 
 		FileWriter fw = new FileWriter(new File(Config.FILE_LOG_OUTPUT));
 		BufferedWriter bw = new BufferedWriter(fw);
 
-		bw.write("Total Request Count        = " + totalCount);
+		bw.write("Total Request Count        = " + ReqCount);
 		bw.newLine(); // 줄바꿈
-		bw.write("Total Write Pages Count    = " + totalWritePagesCount);
+		bw.write("Write Request Count        = " + writeReqCount);
 		bw.newLine(); // 줄바꿈
-		bw.write("Total Read Pages Count     = " + totalReadPagesCount);
+		bw.write("Read Request Count         = " + readReqCount);
 		bw.write("\n\n-----------------------------------------\n\n");
-		bw.write("Write Request Count        = " + writeCount);
+		bw.write("Total Write Pages Count    = " + totalWritePages);
 		bw.newLine(); // 줄바꿈
-		bw.write("Read Request Count         = " + readCount);
+		bw.write("Total Read Pages Count     = " + totalReadPages);
 		bw.write("\n\n-----------------------------------------\n\n");
-		bw.write("Write 1-Page Request Count = " + write_1pageCount);
+		bw.write("Write 1-Page Request Count = " + write_1PageCount);
 		bw.newLine(); // 줄바꿈
-		bw.write("Read 1-Page Request Count  = " + read_1pageCount);
+		bw.write("Read 1-Page Request Count  = " + read_1PageCount);
 		bw.write("\n\n-----------------------------------------\n\n");
 		bw.write("LPN WRITE LIST SIZE        = " + lpnWriteConut.size());
 		bw.newLine(); // 줄바꿈
 		bw.write("LPN READ LIST SIZE         = " + lpnReadConut.size());
 		bw.newLine(); // 줄바꿈
-		bw.write("LPN WRITE LIST SIZE(1page) = " + lpnWriteConut1page.size());
+		bw.write("LPN WRITE LIST SIZE(1page) = " + lpnWritePage.size());
 		bw.newLine(); // 줄바꿈
-		bw.write("LPN READ LIST SIZE(1page)  = " + lpnReadConut1page.size());
+		bw.write("LPN READ LIST SIZE(1page)  = " + lpnReadPage.size());
 		bw.newLine(); // 줄바꿈
 
 		bw.close();
@@ -176,6 +161,7 @@ public class Analysis_main {
 		System.out.println("** Workload Analysis End **");
 	}
 
+	
 	public static void MapToTxt(int[][] map, String output) throws IOException {
 		// create your file writer and buffered reader
 		FileWriter fw = new FileWriter(new File(output));
@@ -190,6 +176,7 @@ public class Analysis_main {
 		return;
 	}
 
+	
 	public static void MapToTxt(Map<Long, Integer> map, String output)
 			throws IOException {
 
