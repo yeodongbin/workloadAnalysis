@@ -10,7 +10,6 @@ public class Config {
 	public static int LOGICAL_BLOCK_NUM = 4096;
 	public static int LOGICAL_PAGE_NUM = 256;
 	
-	
 	// 1: msr
 	public static String FILE_INPUT = "C:/Users/ajou/git/workloadAnalysis/CAMRESWMSA03-lvm0.csv";
 //	public static String FINE_INPUT = "D:/수업 자료/0. 연구 자료/Traces_MSR/"

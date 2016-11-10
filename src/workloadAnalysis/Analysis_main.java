@@ -31,6 +31,7 @@ public class Analysis_main {
 			break;
 		}
 
+		
 		System.out.println("** Workload Analysis End **");
 	}
 
